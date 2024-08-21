@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from loguru import logger
 
 from fastapi_async_sqlalchemy import SQLAlchemyMiddleware
+from starlette.middleware.cors import CORSMiddleware
 
 from .apps.router import api_router
 from .core.config import settings
@@ -41,6 +42,17 @@ app.add_middleware(
         "max_overflow": 64,
     },
 )
+
+# Set all CORS origins enabled
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
 
 @app.get("/")
 async def health_check():

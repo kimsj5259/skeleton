@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, Optional, Union, ClassVar  # ClassVar 추가
 import os
 
-from pydantic import  PostgresDsn, field_validator, EmailStr, AnyHttpUrl
 from pydantic_settings import BaseSettings
+from pydantic import PostgresDsn, field_validator, EmailStr, AnyHttpUrl
 
 
 class Settings(BaseSettings):
@@ -20,10 +20,10 @@ class Settings(BaseSettings):
     DATABASE_PORT: int
     DATABASE_NAME: str
 
-    ASYNC_DATABASE_URI: PostgresDsn | None
+    ASYNC_DATABASE_URI: Optional[PostgresDsn]  # Optional 사용
 
-    @field_validator("ASYNC_DATABASE_URI", pre=True)
-    def assemble_db_connection(cls, v: str | None, values: dict[str, Any]) -> Any:
+    @field_validator("ASYNC_DATABASE_URI", mode="before")
+    def assemble_db_connection(cls, v: Optional[str], values: dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
         return PostgresDsn.build(
@@ -35,23 +35,19 @@ class Settings(BaseSettings):
             path=f"/{values.get('DATABASE_NAME') or ''}",
         )
 
-    DB_POOL_SIZE = 83
-    WEB_CONCURRENCY = 9
-    POOL_SIZE = max(DB_POOL_SIZE // WEB_CONCURRENCY, 5)
-
-    """Redis"""
-    REDIS_HOST: str
-    REDIS_PORT: str
+    DB_POOL_SIZE: ClassVar[int] = 83  # ClassVar로 선언
+    WEB_CONCURRENCY: ClassVar[int] = 9  # ClassVar로 선언
+    POOL_SIZE: ClassVar[int] = max(DB_POOL_SIZE // WEB_CONCURRENCY, 5)  # ClassVar로 선언
 
     """Initial"""
     FIRST_SUPERUSER_EMAIL: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
     """CORS"""
-    BACKEND_CORS_ORIGINS: list[str] | list[AnyHttpUrl]
+    BACKEND_CORS_ORIGINS: Union[list[str], list[AnyHttpUrl]]  # Union 사용
 
-    @field_validator("BACKEND_CORS_ORIGINS", pre=True)
-    def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    def assemble_cors_origins(cls, v: Union[str, list[str]]) -> Union[list[str], str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
         elif isinstance(v, (list, str)):
